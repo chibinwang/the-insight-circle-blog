@@ -20,7 +20,9 @@ export default function TestEmailSystem() {
   } | null>(null);
   const [envCheck, setEnvCheck] = useState<{
     hasUser: boolean;
-    hasPassword: boolean;
+    hasClientId: boolean;
+    hasClientSecret: boolean;
+    hasRefreshToken: boolean;
     hasFromName: boolean;
   } | null>(null);
 
@@ -36,16 +38,16 @@ export default function TestEmailSystem() {
       const data = await response.json();
       setEnvCheck(data);
 
-      if (!data.hasUser || !data.hasPassword) {
+      if (!data.hasUser || !data.hasClientId || !data.hasClientSecret || !data.hasRefreshToken) {
         setResult({
           type: 'error',
-          message: 'Gmail environment variables are not properly configured',
+          message: 'Gmail OAuth2 environment variables are not properly configured',
           details: data,
         });
       } else {
         setResult({
           type: 'success',
-          message: 'Gmail environment variables are properly configured',
+          message: 'Gmail OAuth2 environment variables are properly configured',
           details: data,
         });
       }
@@ -196,12 +198,28 @@ export default function TestEmailSystem() {
                   <span>GMAIL_USER: {envCheck.hasUser ? 'Configured' : 'Missing'}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  {envCheck.hasPassword ? (
+                  {envCheck.hasClientId ? (
                     <CheckCircle2 className="h-4 w-4 text-green-600" />
                   ) : (
                     <XCircle className="h-4 w-4 text-red-600" />
                   )}
-                  <span>GMAIL_APP_PASSWORD: {envCheck.hasPassword ? 'Configured' : 'Missing'}</span>
+                  <span>GMAIL_CLIENT_ID: {envCheck.hasClientId ? 'Configured' : 'Missing'}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {envCheck.hasClientSecret ? (
+                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  ) : (
+                    <XCircle className="h-4 w-4 text-red-600" />
+                  )}
+                  <span>GMAIL_CLIENT_SECRET: {envCheck.hasClientSecret ? 'Configured' : 'Missing'}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {envCheck.hasRefreshToken ? (
+                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  ) : (
+                    <XCircle className="h-4 w-4 text-red-600" />
+                  )}
+                  <span>GMAIL_REFRESH_TOKEN: {envCheck.hasRefreshToken ? 'Configured' : 'Missing'}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   {envCheck.hasFromName ? (
@@ -211,6 +229,13 @@ export default function TestEmailSystem() {
                   )}
                   <span>GMAIL_FROM_NAME: {envCheck.hasFromName ? 'Configured' : 'Using default'}</span>
                 </div>
+                {(!envCheck.hasClientId || !envCheck.hasClientSecret || !envCheck.hasRefreshToken) && (
+                  <div className="pt-3">
+                    <a href="/api/auth/gmail/initiate" className="inline-flex">
+                      <Button variant="default" type="button">Connect Gmail (OAuth)</Button>
+                    </a>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
@@ -350,7 +375,7 @@ export default function TestEmailSystem() {
             </div>
             <div className="pt-3 border-t">
               <strong className="text-amber-600">Important:</strong>
-              <p className="text-muted-foreground">Make sure you're using a Gmail App Password (not your regular password) and have 2-factor authentication enabled on your Google account.</p>
+              <p className="text-muted-foreground">Configure Gmail OAuth2: set GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, GMAIL_REFRESH_TOKEN along with GMAIL_USER. Do not use your real Gmail password.</p>
             </div>
           </CardContent>
         </Card>

@@ -12,7 +12,7 @@ Before you begin, make sure you have:
 
 ---
 
-## Part 1: Set Up Gmail for Newsletter Functionality
+## Part 1: Set Up Gmail for Newsletter Functionality (OAuth2)
 
 Your blog needs to send newsletters to subscribers. Follow these steps to configure Gmail:
 
@@ -23,18 +23,22 @@ Your blog needs to send newsletters to subscribers. Follow these steps to config
 3. Click on "2-Step Verification"
 4. Follow the prompts to enable 2FA if not already enabled
 
-### Step 2: Generate App Password
+### Step 2: Create OAuth 2.0 Client (Google Cloud)
 
-1. After enabling 2FA, go back to [Google Account Security](https://myaccount.google.com/security)
-2. Click on "2-Step Verification" again
-3. Scroll down to "App passwords" and click it
-4. Select "Mail" as the app and "Other" as the device
-5. Enter "思圈blog Newsletter" as the device name
-6. Click "Generate"
-7. **IMPORTANT:** Copy the 16-character password (looks like: xxxx xxxx xxxx xxxx)
-8. Save this password securely - you'll need it in Step 4
+1. Go to Google Cloud Console > APIs & Services > Credentials
+2. Click “Create Credentials” > “OAuth client ID”
+3. Choose “Web application”
+4. Add Authorized redirect URI: `https://YOUR_DOMAIN/api/auth/gmail/callback` (and/or `http://localhost:3000/api/auth/gmail/callback` for local)
+5. Save, then copy the Client ID and Client Secret
 
-### Step 3: Note Your Gmail Address
+### Step 3: Obtain a Refresh Token
+
+1. Deploy or run locally with `GMAIL_USER`, `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET` set
+2. Visit `/api/auth/gmail/initiate` to consent; ensure `access_type=offline` and `prompt=consent`
+3. After redirect, the callback will display a `refresh_token`
+4. Copy `refresh_token` into `GMAIL_REFRESH_TOKEN` and redeploy
+
+### Step 4: Note Your Gmail Address
 
 Write down the Gmail address you'll use (e.g., your-email@gmail.com)
 
@@ -86,14 +90,22 @@ Click "Add"
 **Value:** `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhkb3RiY3BrdWZ2Z3ljYmRkZ290Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIwODcwMDUsImV4cCI6MjA3NzY2MzAwNX0.u4LBz6y-erh6Dq0irdaYZUOg_whZscp9ub387ulOoxM`
 Click "Add"
 
-#### 4.2: Gmail Configuration
+#### 4.2: Gmail Configuration (OAuth2)
 
 **Variable Name:** `GMAIL_USER`
 **Value:** Your Gmail address from Part 1, Step 3 (e.g., your-email@gmail.com)
 Click "Add"
 
-**Variable Name:** `GMAIL_APP_PASSWORD`
-**Value:** The 16-character app password from Part 1, Step 2 (remove spaces if any)
+**Variable Name:** `GMAIL_CLIENT_ID`
+**Value:** Your Google OAuth Client ID
+Click "Add"
+
+**Variable Name:** `GMAIL_CLIENT_SECRET`
+**Value:** Your Google OAuth Client Secret
+Click "Add"
+
+**Variable Name:** `GMAIL_REFRESH_TOKEN`
+**Value:** Your OAuth refresh token (obtained via the callback)
 Click "Add"
 
 **Variable Name:** `GMAIL_FROM_NAME`
@@ -181,7 +193,7 @@ Great news! Your deployment is now automated:
 
 **Solution:**
 1. Go to Vercel dashboard > Your Project > Settings > Environment Variables
-2. Verify that `GMAIL_USER` and `GMAIL_APP_PASSWORD` are set correctly
+2. Verify that `GMAIL_USER`, `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, and `GMAIL_REFRESH_TOKEN` are set correctly
 3. Make sure there are no extra spaces in the values
 4. Redeploy the project
 
@@ -212,12 +224,9 @@ Great news! Your deployment is now automated:
 ### Issue: Newsletter emails not sending
 
 **Solution:**
-1. Verify Gmail App Password is correct (no spaces)
-2. Make sure 2FA is enabled on your Gmail account
-3. Check if Gmail is blocking the app password:
-   - Go to [Gmail Security Checkup](https://myaccount.google.com/security-checkup)
-   - Look for any alerts about blocked sign-in attempts
-   - Allow the app if blocked
+1. Ensure 2FA is enabled on your Gmail account used for OAuth consent
+2. Confirm `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN` are correct
+3. If `refresh_token` is missing, re-consent with `prompt=consent&access_type=offline`
 4. Test with the admin panel's "Test Newsletter" feature
 
 ---
@@ -246,7 +255,9 @@ Here's a complete list of all environment variables needed:
 | `NEXT_PUBLIC_SUPABASE_URL` | Your Supabase project URL | https://xxxxx.supabase.co |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Your Supabase anonymous key | eyJhbGc... |
 | `GMAIL_USER` | Gmail address for sending emails | your-email@gmail.com |
-| `GMAIL_APP_PASSWORD` | Gmail app password (16 chars) | abcdabcdabcdabcd |
+| `GMAIL_CLIENT_ID` | Google OAuth Client ID | xxxxx.apps.googleusercontent.com |
+| `GMAIL_CLIENT_SECRET` | Google OAuth Client Secret | abcdef... |
+| `GMAIL_REFRESH_TOKEN` | OAuth refresh token | 1//0g... |
 | `GMAIL_FROM_NAME` | Display name for newsletter emails | 思圈blog |
 | `NEXT_PUBLIC_SITE_URL` | Your Vercel deployment URL | https://your-app.vercel.app |
 
@@ -257,7 +268,7 @@ Here's a complete list of all environment variables needed:
 - **Vercel Documentation:** [vercel.com/docs](https://vercel.com/docs)
 - **Next.js Documentation:** [nextjs.org/docs](https://nextjs.org/docs)
 - **Supabase Documentation:** [supabase.com/docs](https://supabase.com/docs)
-- **Gmail App Passwords Help:** [support.google.com](https://support.google.com/accounts/answer/185833)
+- **Google APIs OAuth 2.0:** `https://developers.google.com/identity/protocols/oauth2`
 
 ---
 
@@ -270,8 +281,7 @@ Here's a complete list of all environment variables needed:
   - 100GB bandwidth per month
   - Preview deployments for every commit
 
-- Your Gmail account can send up to 500 emails per day with App Passwords
-- If you need to send more emails, consider upgrading to a professional email service
+- Gmail sending has daily quotas; for higher volume, consider a dedicated email service
 
 - For production use, consider:
   - Setting up a custom domain

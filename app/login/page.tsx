@@ -9,11 +9,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import { Loader2 } from 'lucide-react';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [rateLimitError, setRateLimitError] = useState<string | null>(null);
   const [unlockTime, setUnlockTime] = useState<Date | null>(null);
   const router = useRouter();
@@ -86,6 +88,35 @@ export default function LoginPage() {
     setLoading(false);
   };
 
+  const handleGoogleLogin = async () => {
+    try {
+      setGoogleLoading(true);
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`
+        }
+      });
+
+      if (error) {
+        toast({
+          title: 'Google 登入失敗',
+          description: error.message,
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Google OAuth error:', error);
+      toast({
+        title: 'Google 登入失敗',
+        description: '請稍後再試或改用電子郵件登入',
+        variant: 'destructive',
+      });
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
@@ -105,6 +136,49 @@ export default function LoginPage() {
               )}
             </div>
           )}
+          <Button
+            onClick={handleGoogleLogin}
+            variant="outline"
+            className="w-full flex items-center justify-center gap-2 font-medium"
+            type="button"
+            disabled={googleLoading || loading}
+          >
+            {googleLoading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                正在連結 Google...
+              </>
+            ) : (
+              <>
+                <span className="bg-white rounded-full p-1 shadow-sm">
+                  <svg
+                    className="h-4 w-4"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path fill="#EA4335" d="M12 10.2v4h5.7c-.2 1.3-1.7 3.8-5.7 3.8-3.4 0-6.3-2.8-6.3-6.2s2.9-6.2 6.3-6.2c1.9 0 3.2.8 4 1.6l2.8-2.7C17.2 2.8 14.8 1.8 12 1.8 6.9 1.8 2.7 6 2.7 11s4.2 9.2 9.3 9.2c5.4 0 9-3.8 9-9.1 0-.6-.1-1-.2-1.5H12z" />
+                  </svg>
+                </span>
+                使用 Google 繼續
+              </>
+            )}
+          </Button>
+
+          <p className="text-xs text-muted-foreground text-center mt-2">
+            我們將帶您前往 Google 完成驗證
+          </p>
+
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-white px-2 text-muted-foreground">
+                或使用電子郵件登入
+              </span>
+            </div>
+          </div>
+
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">電子郵件</Label>

@@ -9,7 +9,7 @@ interface PostContentProps {
 export function PostContent({ content }: PostContentProps) {
   return (
     <div
-      className="prose prose-lg max-w-none text-gray-800 leading-relaxed ql-editor"
+      className="prose prose-lg max-w-none text-gray-800 leading-relaxed ql-editor quill-content"
       dangerouslySetInnerHTML={{ __html: content }}
       style={{
         padding: '0',

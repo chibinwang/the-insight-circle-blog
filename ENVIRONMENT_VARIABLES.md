@@ -9,7 +9,9 @@ Copy this checklist and check off each item as you complete it:
 - [ ] NEXT_PUBLIC_SUPABASE_URL configured
 - [ ] NEXT_PUBLIC_SUPABASE_ANON_KEY configured
 - [ ] GMAIL_USER configured with real Gmail address
-- [ ] GMAIL_APP_PASSWORD configured with 16-character app password
+- [ ] GMAIL_CLIENT_ID configured (Google Cloud OAuth)
+- [ ] GMAIL_CLIENT_SECRET configured (Google Cloud OAuth)
+- [ ] GMAIL_REFRESH_TOKEN configured (OAuth refresh token)
 - [ ] GMAIL_FROM_NAME configured (optional, defaults to "思圈blog")
 - [ ] NEXT_PUBLIC_SITE_URL configured with deployment URL
 - [ ] Tested newsletter subscription
@@ -45,24 +47,35 @@ Copy this checklist and check off each item as you complete it:
 - **Required:** Yes (for newsletter functionality)
 - **Description:** Gmail address used to send newsletter emails
 - **Example:** `your-email@gmail.com`
-- **How to set up:**
+- **Notes:**
   1. Use a Gmail account you control
   2. This email will be the "From" address for newsletters
-  3. Must have 2FA enabled
-  4. Must generate an App Password (see below)
+  3. Ensure 2FA is enabled on the account used for OAuth consent
 
-#### GMAIL_APP_PASSWORD
+#### GMAIL_APP_PASSWORD (Deprecated - use OAuth2)
+- Deprecated. Use `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, and `GMAIL_REFRESH_TOKEN` instead.
+
+#### GMAIL_CLIENT_ID
 - **Type:** Secret (server-side only)
 - **Required:** Yes (for newsletter functionality)
-- **Description:** 16-character app password for Gmail
-- **Format:** 16 characters (remove spaces if present)
-- **Example:** `abcdabcdabcdabcd`
-- **How to generate:**
-  1. Go to [Google Account Security](https://myaccount.google.com/security)
-  2. Enable 2-Factor Authentication if not enabled
-  3. Go to "App passwords"
-  4. Generate new password for "Mail" app
-  5. Copy the 16-character password (remove spaces)
+- **Description:** OAuth2 Client ID from Google Cloud Console
+- **Where to find it:** Google Cloud Console > APIs & Services > Credentials
+
+#### GMAIL_CLIENT_SECRET
+- **Type:** Secret (server-side only)
+- **Required:** Yes (for newsletter functionality)
+- **Description:** OAuth2 Client Secret from Google Cloud Console
+- **Where to find it:** Google Cloud Console > APIs & Services > Credentials
+
+#### GMAIL_REFRESH_TOKEN
+- **Type:** Secret (server-side only)
+- **Required:** Yes (for newsletter functionality)
+- **Description:** OAuth2 Refresh Token used to obtain access tokens for Gmail via Nodemailer
+- **How to generate (one-time):**
+  1. Create an OAuth 2.0 Client (type: Web application) in Google Cloud Console
+  2. Add an authorized redirect URI for your local script (e.g., `http://localhost:3000/oauth2callback`) or use an out-of-band method during token generation
+  3. Use a small script or a tool to request consent and retrieve a refresh token for the Gmail scope
+  4. Save the refresh token here (do NOT share it)
 
 #### GMAIL_FROM_NAME
 - **Type:** Secret (server-side only)
@@ -109,9 +122,11 @@ Create a `.env.local` file in your project root:
 NEXT_PUBLIC_SUPABASE_URL=https://xdotbcpkufvgycbddgot.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhkb3RiY3BrdWZ2Z3ljYmRkZ290Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIwODcwMDUsImV4cCI6MjA3NzY2MzAwNX0.u4LBz6y-erh6Dq0irdaYZUOg_whZscp9ub387ulOoxM
 
-# Gmail (use real values)
+# Gmail OAuth2 (use real values)
 GMAIL_USER=your-email@gmail.com
-GMAIL_APP_PASSWORD=your-16-char-app-password
+GMAIL_CLIENT_ID=your-google-oauth-client-id
+GMAIL_CLIENT_SECRET=your-google-oauth-client-secret
+GMAIL_REFRESH_TOKEN=your-google-oauth-refresh-token
 GMAIL_FROM_NAME=思圈blog
 
 # Site URL (for local development)
@@ -133,7 +148,7 @@ export async function GET() {
     supabase_url: process.env.NEXT_PUBLIC_SUPABASE_URL ? 'Set' : 'Missing',
     supabase_key: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'Set' : 'Missing',
     gmail_user: process.env.GMAIL_USER ? 'Set' : 'Missing',
-    gmail_pass: process.env.GMAIL_APP_PASSWORD ? 'Set' : 'Missing',
+    gmail_oauth: process.env.GMAIL_CLIENT_ID && process.env.GMAIL_CLIENT_SECRET && process.env.GMAIL_REFRESH_TOKEN ? 'Set' : 'Missing',
     site_url: process.env.NEXT_PUBLIC_SITE_URL ? 'Set' : 'Missing',
   });
 }
@@ -161,7 +176,7 @@ Visit `/api/test-env` to check. All should show "Set".
 
 ### DO:
 - ✅ Use environment variables for all sensitive data
-- ✅ Use App Passwords (never your real Gmail password)
+- ✅ Use OAuth2 (never your real Gmail password)
 - ✅ Keep `.env` files in `.gitignore`
 - ✅ Use different credentials for development and production
 - ✅ Rotate passwords regularly
@@ -172,7 +187,7 @@ Visit `/api/test-env` to check. All should show "Set".
 - ❌ Never use your real Gmail password
 - ❌ Never expose server-side secrets to the browser
 - ❌ Never hardcode sensitive values in your code
-- ❌ Never share your App Password publicly
+- ❌ Never share your OAuth Client Secret/Refresh Token publicly
 
 ---
 
@@ -189,16 +204,16 @@ Visit `/api/test-env` to check. All should show "Set".
 ### Problem: Gmail authentication failing
 
 **Solution:**
-- Verify 2FA is enabled on Gmail account
-- Regenerate App Password
-- Make sure there are no spaces in the password
+- Verify 2FA is enabled on the Gmail account used for OAuth consent
+- Ensure `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, and `GMAIL_REFRESH_TOKEN` are correct
+- If `refresh_token` is missing, re-consent with `prompt=consent&access_type=offline`
 - Check if Gmail blocked the sign-in attempt
 - Try using a different Gmail account
 
 ### Problem: "Email service not configured" error
 
 **Solution:**
-- Check that both `GMAIL_USER` and `GMAIL_APP_PASSWORD` are set
+- Check that `GMAIL_USER`, `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, and `GMAIL_REFRESH_TOKEN` are set
 - Verify the values don't have extra spaces or quotes
 - Check server logs for specific error messages
 - Test with the admin panel's test email feature
@@ -227,8 +242,14 @@ Value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhk
 Variable: GMAIL_USER
 Value: [YOUR_GMAIL_ADDRESS]
 
-Variable: GMAIL_APP_PASSWORD
-Value: [YOUR_16_CHAR_APP_PASSWORD]
+Variable: GMAIL_CLIENT_ID
+Value: [YOUR_GOOGLE_OAUTH_CLIENT_ID]
+
+Variable: GMAIL_CLIENT_SECRET
+Value: [YOUR_GOOGLE_OAUTH_CLIENT_SECRET]
+
+Variable: GMAIL_REFRESH_TOKEN
+Value: [YOUR_GOOGLE_OAUTH_REFRESH_TOKEN]
 
 Variable: GMAIL_FROM_NAME
 Value: 思圈blog
